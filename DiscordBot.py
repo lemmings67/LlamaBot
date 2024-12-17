@@ -48,11 +48,11 @@ headers = {
 # Prepare the data to send to the AI service
 data = {
     "messages": context_messages,
-    "temperature": 0.7
+    "temperature": config.getfloat("ai", "temperature"),
 }
 
 # Send a question to the AI model
-async def ask_question(question):
+async def ask_question(author, question):
     # Mettre la question dans le contexte
     context_messages.append({"role": "user", "content": question})
     data["messages"] = context_messages
@@ -66,8 +66,11 @@ async def ask_question(question):
 
         # Vérifier le statut de la réponse et afficher le contenu
         if response.status_code == 200:
+            answer = response.json()['choices'][0]['message']['content']
             # Affiche la réponse dans la console
-            print(f"Réponse: {response.json()['choices'][0]['message']['content']}")
+            print(f"Réponse: { answer}")
+            context_messages.append({"role": "assistant", "content": answer})
+            data["messages"] = context_messages
             response_message = response.json()["choices"][0]["message"]["content"]
             return response_message
         else:
@@ -104,9 +107,12 @@ async def on_message(message):
     if bot.user.mentioned_in(message):
         # Getting message content
         question = message.content
+        
+        # Getting message author
+        author = message.author
 
         # Sending the question to the AI model
-        answer = await ask_question(question)
+        answer = await ask_question(author, question)
 
         # Sending the answer back to the user
         await message.channel.send(answer)
